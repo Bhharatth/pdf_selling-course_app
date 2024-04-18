@@ -1,19 +1,20 @@
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, GetObjectCommand, PutObjectCommand} from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { url } from "inspector";
+import { env } from "../../env.js";
+
 
 
 const s3Client = new S3Client({
-    region: "",
+    region: "ap-south-1",
     credentials: {
-        accessKeyId: '',
-        secretAccessKey: ''
+        accessKeyId: env.AWS_S3_ACCESS_KEY_ID ,
+        secretAccessKey: env.AWS_S3_SECRET_ACCESS_KEY
     },
 
 });
 
 
-export async function putObject(filename: string, pdfData: any, thumbNailData: any) {
+export async function putObject(filename: string) {
 
     const timestamp = Date.now();
     const folderName = `uploads/${timestamp}`;
@@ -22,35 +23,51 @@ export async function putObject(filename: string, pdfData: any, thumbNailData: a
     const thumbnailKey = `${folderName}/thumbnails_${filename}.jpeg`;
 
     const pdfCommand = new PutObjectCommand({
-        Bucket: '',
+        Bucket: 'pdf-app.bharath100xdeveloper.xyz',
         Key: pdfKey,
-        Body: pdfData,
         ContentType: 'application/pdf'
     });
 
     const thumbNailCommand = new PutObjectCommand({
-        Bucket: '',
+        Bucket: 'pdf-app.bharath100xdeveloper.xyz',
         Key: thumbnailKey,
-        Body: thumbNailData,
         ContentType: 'image/jpeg'
     });
-    const uploadPdfPromise = s3Client.send(pdfCommand);
-    const uploadThumbnailPromise = s3Client.send(thumbNailCommand);
 
-    await Promise.all([uploadPdfPromise, uploadThumbnailPromise]);
+    const uploadPdfUrl = await getSignedUrl(s3Client, pdfCommand, {expiresIn:3600})
+    const uploadThumbnailUrl = await getSignedUrl(s3Client, thumbNailCommand, {expiresIn:3600});
 
-    const pdfUrl = await getSignedUrl(s3Client, pdfCommand, {expiresIn: 60});
     return {
-        pdfUrl,
-        folderName
+       uploadPdfUrl,
+       uploadThumbnailUrl,
+       folderName
     }
 };
+
+export async function uploadFilesToS3(preSingedUrl: string, file: any,contentType: string){
+
+   try {
+     const res = await fetch(preSingedUrl, {
+        method: 'PUT',
+        body: file,
+        headers:{
+            'Content-Type': contentType
+        }
+     });
+     console.log('File uploaded successfully!', res.status);
+     return res
+   } catch (error) {
+    console.error('File upload failed:');
+    
+   }
+
+}
 
 
 
 export async function getObjectURL(key: string) {
     const command = new GetObjectCommand({
-        Bucket: '',
+        Bucket: 'pdf-app.bharath100xdeveloper.xyz',
         Key: key,
     });
     const url = await getSignedUrl(s3Client, command, { expiresIn: 200 });
