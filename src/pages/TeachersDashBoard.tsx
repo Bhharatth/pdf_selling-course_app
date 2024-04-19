@@ -4,7 +4,6 @@ const TeachersDashBoard = () => {
 
   const [isLoadingUpload, setIsLoadingUpload] = useState<any>(null);
   const [pdf, setPdf] = useState<any>(null);
-  const [thumbNail, setThumbNail] = useState<any>(null);
 
 
   const handlePdfChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -14,12 +13,6 @@ const TeachersDashBoard = () => {
     }
   };
 
-  const handleThmbNailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedThumnnail = event.target.files?.[0];
-    if (selectedThumnnail) {
-      setThumbNail(selectedThumnnail);
-    }
-  }
 
 
   const uploadUrl = api.post.upload.useMutation();
@@ -42,8 +35,10 @@ const TeachersDashBoard = () => {
           'Content-Type': contentType
         }
       });
-      
-      const responseBody = await res.text(); 
+
+      setPdf(null);
+
+      const responseBody = await res.text();
       console.log('Response body:', responseBody);
       console.log('File uploaded successfully!', res.status);
       return res
@@ -57,26 +52,22 @@ const TeachersDashBoard = () => {
 
   const handleClick = async () => {
 
-    if (thumbNail) {
+    if (pdf) {
 
-      const { pdfUrl, thumbNailUrl } = await uploadUrl.mutateAsync({
+      const { pdfUrl } = await uploadUrl.mutateAsync({
         title: "new pdf",
         description: "newly launched",
         filename: "new file",
-        pdfFile: pdf,
-        thumbnail: thumbNail
       });
 
 
-     
+
       await uploadFilesToS3(pdfUrl, pdf, "application/pdf");
-      await uploadFilesToS3(thumbNailUrl, thumbNail, "image/jpeg");
 
 
       setPdf(null);
-      setThumbNail(null);
 
-      console.log({ pdfUrl, thumbNailUrl })
+      console.log({ pdfUrl })
 
     } else {
       console.log('Please select both PDF and thubmnail to upload')
@@ -102,12 +93,7 @@ const TeachersDashBoard = () => {
             onChange={handlePdfChange}
             className="border border-gray-600 mb-10 py-2 px-4 rounded-lg flex-grow"
           />
-          UPLOAD THUMBNAIL
-          <input
-            type="file"
-            onChange={handleThmbNailChange}
-            className="border border-gray-600 py-2 px-4 rounded-lg flex-grow"
-          />
+          
           <button className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg mt-5"
             onClick={handleClick}
           >
